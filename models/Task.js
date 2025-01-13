@@ -26,6 +26,22 @@ const taskSchema = new mongoose.Schema(
 			type: mongoose.Schema.Types.ObjectId,
 			ref: "User", // Kim tomonidan yaratilgan
 		},
+		attachments: [
+			{
+				filename: {
+					type: String,
+					required: true, // Fayl nomini saqlash
+				},
+				contentType: {
+					type: String,
+					required: true, // Fayl turi (masalan, 'image/png')
+				},
+				data: {
+					type: Buffer,
+					required: true, // Fayl ma'lumotlarini binary formatda saqlash
+				},
+			},
+		],
 	},
 	{ timestamps: true }
 );

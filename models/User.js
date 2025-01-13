@@ -11,6 +11,13 @@ const UserSchema = new mongoose.Schema(
 			enum: ["admin", "teacher", "student"],
 			default: "student",
 		},
+		profilePicture: {
+			filename: String,
+			originalname: String,
+			mimetype: String,
+			size: Number,
+			buffer: Buffer, // Faylni binary formatda saqlash
+		},
 	},
 	{ timestamps: true }
 );

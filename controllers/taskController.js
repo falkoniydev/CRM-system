@@ -1,14 +1,43 @@
 import Task from "../models/Task.js";
+import User from "../models/User.js";
+import { logActivity } from "../utils/logActivity.js";
+import { sendEmail } from "../utils/emailNotifications.js";
+import moment from "moment-timezone";
 
 // Create new task
 export const createTask = async (req, res) => {
+	const { title, description, assignedTo, dueDate } = req.body;
+
+	// Vaqtni Toshkent zonasi bo‘yicha olish
+	const createdAt = moment().tz("Asia/Tashkent").toDate();
+
 	try {
 		const task = new Task({
 			...req.body,
+			title,
+			description,
+			assignedTo,
+			dueDate,
+			createdAt, // Local vaqt bilan saqlash
 			createdBy: req.user.id,
 		});
 		await task.save();
 		await task.populate("assignedTo", "name email role"); // `assignedTo` to'ldiriladi
+
+		// Log yozish
+		await logActivity("task_created", "Task", task._id, req.user.id);
+
+		// Email yuborish
+		const assignedUser = await User.findById(assignedTo);
+		if (assignedUser) {
+			const subject = "Yangi vazifa tayinlandi";
+			const text = `Sizga yangi vazifa berildi: ${title}\nBatafsil ma'lumot uchun tizimga kiring.`;
+			await sendEmail(assignedUser.email, subject, text);
+		}
+
+		// Real-time event
+		io.emit("taskStatusUpdated", { taskId, status });
+
 		res.status(201).json({
 			message: "Task created successfully",
 			task,
@@ -102,6 +131,9 @@ export const updateTask = async (req, res) => {
 		Object.assign(task, req.body);
 		await task.save();
 
+		// Log yozish
+		await logActivity("task_updated", "Task", task._id, req.user.id);
+
 		res.status(200).json({ message: "Task updated successfully", task });
 	} catch (err) {
 		res.status(500).json({ error: err.message });
@@ -118,6 +150,17 @@ export const deleteTask = async (req, res) => {
 
 		// Yangi funksiyadan foydalanamiz
 		await task.deleteOne();
+
+		// Log yozish
+		await logActivity("task_deleted", "Task", task._id, req.user.id);
+
+		// Email yuborish
+		const assignedUser = await User.findById(task.assignedTo);
+		if (assignedUser) {
+			const subject = "Vazifa o'chirildi";
+			const text = `Sizga tayinlangan vazifa o'chirildi: ${task.title}`;
+			await sendEmail(assignedUser.email, subject, text);
+		}
 
 		res.status(200).json({ message: "Task deleted successfully" });
 	} catch (err) {

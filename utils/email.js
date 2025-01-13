@@ -1,29 +1,30 @@
 import nodemailer from "nodemailer";
 
-export const sendEmail = async (to, subject, text) => {
+export const sendEmail = async ({ to, subject, text }) => {
 	try {
-		// Nodemailer transportni sozlash
+		console.log("Email yuborilmoqda:", { to, subject, text }); // Log qo'shing
+
 		const transporter = nodemailer.createTransport({
-			service: "gmail",
+			host: process.env.SMTP_HOST,
+			port: process.env.SMTP_PORT,
+			secure: false, // True only for 465, false for other ports
 			auth: {
-				user: process.env.EMAIL_USER, // Gmail account
-				pass: process.env.EMAIL_PASS, // Gmail password yoki App Password
+				user: process.env.SMTP_USER,
+				pass: process.env.SMTP_PASS,
 			},
 		});
 
-		// Email ma'lumotlari
 		const mailOptions = {
-			from: process.env.EMAIL_USER,
-			to,
-			subject,
-			text,
+			from: process.env.SMTP_USER, // Sender address
+			to: to, // Recipient address
+			subject: subject,
+			text: text,
 		};
 
-		// Emailni yuborish
 		await transporter.sendMail(mailOptions);
-		console.log("Email sent successfully");
-	} catch (err) {
-		console.error("Email send failed:", err.message);
-		throw new Error("Email send failed");
+		console.log("Email muvaffaqiyatli yuborildi!");
+	} catch (error) {
+		console.error("Email yuborishda xatolik:", error);
+		throw error;
 	}
 };

@@ -2,8 +2,29 @@ import express from "express";
 import User from "../models/User.js";
 import authMiddleware from "../middlewares/authMiddleware.js";
 import roleMiddleware from "../middlewares/roleMiddleware.js";
+import { uploadProfilePhoto } from "../controllers/userController.js";
+import multer from "multer";
+// import upload from "../utils/fileUpload.js"; // Multer
+import { updateProfile, uploadAvatar } from "../controllers/userController.js";
 
 const router = express.Router();
+
+// Multer configuration for profile photo upload
+const storage = multer.memoryStorage();
+const upload = multer({ storage });
+
+// Profilni yangilash
+router.put("/profile/:userId", updateProfile);
+
+// Avatarni yuklash
+router.post("/profile/:userId/avatar", upload.single("avatar"), uploadAvatar);
+
+// Upload profile photo
+router.post(
+	"/upload-profile/:userId",
+	upload.single("profilePicture"),
+	uploadProfilePhoto
+);
 
 // Create new user (Admin only)
 router.post(

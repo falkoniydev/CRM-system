@@ -1,36 +1,87 @@
 import express from "express";
-import mongoose from "mongoose";
+import mongoose from "mongoose"; // MongoDB uchun
 import cors from "cors";
 import dotenv from "dotenv";
+import morgan from "morgan"; // Logger
 import userRoutes from "./routes/userRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 import customerRoutes from "./routes/customerRoutes.js";
 import taskRoutes from "./routes/taskRoutes.js";
 import commentRoutes from "./routes/commentRoutes.js";
+import activityLogRoutes from "./routes/activityLogRoutes.js";
+import { monitorTasks } from "./utils/scheduler.js";
+import fileRoutes from "./routes/fileRoutes.js";
+import statsRoutes from "./routes/statsRoutes.js";
+import chatRoutes from "./routes/chatRoutes.js";
+import { Server } from "socket.io";
+import http from "http";
 
 // `dotenv` konfiguratsiyasi
 dotenv.config();
 
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+	cors: {
+		origin: ["http://localhost:3000", "https://yourfrontend.com"], // Frontend URL
+		methods: ["GET", "POST", "PUT", "DELETE"],
+	},
+});
+
+// Real-time funksiyalar
+io.on("connection", (socket) => {
+	console.log(`User connected: ${socket.id}`);
+
+	// Task statusini yangilash event
+	socket.on("updateTaskStatus", (data) => {
+		console.log("Task updated:", data);
+		io.emit("taskStatusUpdated", data); // Hammasiga yuborish
+	});
+
+	// Foydalanuvchi uzilganida
+	socket.on("disconnect", () => {
+		console.log(`User disconnected: ${socket.id}`);
+	});
+});
 
 // Middleware
 app.use(express.json());
-app.use(cors());
+app.use(express.urlencoded({ extended: true }));
+app.use(
+	cors({
+		origin: ["http://localhost:3000", "https://yourfrontend.com"],
+	})
+);
+app.use(morgan("dev")); // Logger
 
 // Routes
-app.use("/api/auth", authRoutes); // Auth marshrutlari (signup, login, va boshqalar)
-app.use("/api/users", userRoutes); // Foydalanuvchi marshrutlari (CRUD)
-app.use("/api/customers", customerRoutes);
-app.use("/api/tasks", taskRoutes);
-app.use("/api/tasks", commentRoutes);
+app.use("/api/auth", authRoutes); // Auth marshrutlari
+app.use("/api/users", userRoutes); // Foydalanuvchi marshrutlari
+app.use("/api/customers", customerRoutes); // Customer management
+app.use("/api/tasks", taskRoutes); // Task management
+app.use("/api/comments", commentRoutes); // Comment management
+app.use("/api/activity-logs", activityLogRoutes); // Activity log
+app.use("/api/files", fileRoutes);
+app.use("/api/stats", statsRoutes); // Foydalanuvchi faoliyati statistikasi uchun marshrut
+app.use("/api/chat", chatRoutes);
+
+// Health check endpoint
+app.get("/health", (req, res) => res.status(200).json({ status: "OK" }));
+
+// Task monitoringni ishga tushirish
+monitorTasks();
 
 // MongoDB ulanishi
+const MONGO_URI = process.env.MONGO_URI;
+
 mongoose
-	.connect(process.env.MONGO_URI, {
+	.connect(MONGO_URI, {
 		useNewUrlParser: true,
 		useUnifiedTopology: true,
+		serverSelectionTimeoutMS: 2000, // 2 soniya
+		socketTimeoutMS: 45000, // 45 soniyas
 	})
-	.then(() => console.log("MongoDB connected"))
+	.then(() => console.log("MongoDB connected successfully!"))
 	.catch((err) => console.error("MongoDB connection error:", err));
 
 // Simple API
@@ -38,6 +89,13 @@ app.get("/", (req, res) => {
 	res.send("Mini CRM backend is running!");
 });
 
-// Port
+// Error handling middleware
+app.use((err, req, res, next) => {
+	console.error(err.stack);
+	res.status(500).json({ error: "Something went wrong!" });
+});
+
+// Server port
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+server.listen(PORT, () => console.log(`Server running on port ${PORT}`));

@@ -6,6 +6,11 @@ import { sendEmail } from "../utils/email.js";
 export const signup = async (req, res) => {
 	const { name, email, password, role } = req.body;
 
+	// Emailni tekshirish
+	if (!email) {
+		return res.status(400).json({ error: "Email is required." });
+	}
+
 	try {
 		// Foydalanuvchini yaratish
 		const user = await User.create({ name, email, password, role });
@@ -15,7 +20,7 @@ export const signup = async (req, res) => {
 			{ id: user._id },
 			process.env.JWT_SECRET,
 			{
-				expiresIn: "24h",
+				expiresIn: "4h",
 			}
 		);
 
@@ -23,11 +28,11 @@ export const signup = async (req, res) => {
 		const verificationLink = `${process.env.BASE_URL}/api/auth/verify-email?token=${verificationToken}`;
 
 		// Emailni yuborish
-		await sendEmail(
-			email,
-			"Email Verification",
-			`Verify your email: ${verificationLink}`
-		);
+		await sendEmail({
+			to: email,
+			subject: "Email Verification",
+			text: `Verify your email: ${verificationLink}`,
+		});
 
 		res
 			.status(201)
@@ -108,11 +113,11 @@ export const forgotPassword = async (req, res) => {
 		const resetLink = `${process.env.BASE_URL}/api/auth/reset-password?token=${resetToken}`;
 
 		// Emailni yuborish
-		await sendEmail(
-			email,
-			"Reset Password",
-			`Reset your password: ${resetLink}`
-		);
+		await sendEmail({
+			to: email,
+			subject: "Reset Password",
+			text: `Reset your password: ${resetLink}`,
+		});
 
 		res.json({ message: "Reset password link sent to your email." });
 	} catch (err) {

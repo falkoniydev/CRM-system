@@ -1,5 +1,6 @@
 import Comment from "../models/Comment.js";
 import Task from "../models/Task.js";
+import { logActivity } from "../utils/logActivity.js";
 
 // Create a new comment
 export const createComment = async (req, res) => {
@@ -20,9 +21,12 @@ export const createComment = async (req, res) => {
 
 		await comment.save();
 
-		console.log("Task ID:", taskId);
-		console.log("User ID from req.user:", req.user.id);
-		console.log("Content:", content);
+		// console.log("Task ID:", taskId);
+		// console.log("User ID from req.user:", req.user.id);
+		// console.log("Content:", content);
+
+		// Log yozish
+		await logActivity("comment_created", "Task", comment._id, req.user.id);
 
 		res.status(201).json({ message: "Comment added successfully", comment });
 	} catch (err) {
@@ -66,6 +70,10 @@ export const deleteComment = async (req, res) => {
 		}
 
 		await comment.deleteOne();
+
+		// Log yozish
+		await logActivity("comment_deleted", "Task", comment._id, req.user.id);
+
 		res.status(200).json({ message: "Comment deleted successfully" });
 	} catch (err) {
 		console.error(err);
