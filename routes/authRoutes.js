@@ -12,9 +12,17 @@ const router = express.Router();
 // Signup - No middleware required
 /**
  * @swagger
+ * tags:
+ *   name: Auth Service
+ *   description: Foydalanuvchi autentifikatsiyasi uchun endpointlar
+ */
+
+/**
+ * @swagger
  * /api/auth/signup:
  *   post:
  *     summary: "Foydalanuvchini ro'yxatdan o'tkazish"
+ *     tags: [Auth Service]
  *     description: "Yangi foydalanuvchini ro'yxatdan o'tkazish uchun endpoint."
  *     requestBody:
  *       required: true
