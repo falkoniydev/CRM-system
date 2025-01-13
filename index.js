@@ -14,6 +14,7 @@ import fileRoutes from "./routes/fileRoutes.js";
 import statsRoutes from "./routes/statsRoutes.js";
 import chatRoutes from "./routes/chatRoutes.js";
 import { Server } from "socket.io";
+import { swaggerDocs } from "./swagger.js";
 import http from "http";
 
 // `dotenv` konfiguratsiyasi
@@ -100,5 +101,10 @@ app.use((err, req, res, next) => {
 
 // Server port
 const PORT = process.env.PORT || 5000;
+
+const BASE_URL = process.env.BASE_URL;
+
+// Swagger-ni ishga tushirish
+swaggerDocs(app, PORT);
 
 server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
