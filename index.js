@@ -72,14 +72,17 @@ app.get("/health", (req, res) => res.status(200).json({ status: "OK" }));
 monitorTasks();
 
 // MongoDB ulanishi
-const MONGO_URI = process.env.MONGO_URI;
+const mongooseURI =
+	process.env.NODE_ENV === "production"
+		? process.env.MONGO_URI // Production uchun masofaviy MongoDB
+		: "mongodb://127.0.0.1:27017/mini_crm_db"; // Lokal uchun
 
 mongoose
-	.connect(MONGO_URI, {
+	.connect(mongooseURI, {
 		useNewUrlParser: true,
 		useUnifiedTopology: true,
 		serverSelectionTimeoutMS: 2000, // 2 soniya
-		socketTimeoutMS: 45000, // 45 soniyas
+		socketTimeoutMS: 45000, // 45 soniya
 	})
 	.then(() => console.log("MongoDB connected successfully!"))
 	.catch((err) => console.error("MongoDB connection error:", err));
