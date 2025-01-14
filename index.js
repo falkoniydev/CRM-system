@@ -25,8 +25,10 @@ const server = http.createServer(app);
 const io = new Server(server, {
 	cors: {
 		origin: [
-			"http://localhost:3000", // localhosts
-			"https://yourfrontend.com", // Frontend
+			"http://localhost:3000", // localhosts for Frontend
+			"http://localhost:5173", // localhost for Frontend
+			"https://yourfrontend.com", // Frontend Production host
+			"http://localhost:5000", // localhosts
 			"https://crm-system.onrender.com", // production server
 		], // Frontend URL
 		methods: ["GET", "POST", "PUT", "DELETE"],
@@ -54,7 +56,13 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(
 	cors({
-		origin: ["http://localhost:3000", "https://yourfrontend.com"],
+		origin: [
+			"http://localhost:3000", // localhosts for Frontend
+			"http://localhost:5173", // localhost for Frontend
+			"https://yourfrontend.com", // Frontend Production host
+			"http://localhost:5000", // localhosts
+			"https://crm-system.onrender.com", // production server
+		],
 	})
 );
 app.use(morgan("dev")); // Logger
@@ -81,12 +89,13 @@ const mongooseURI =
 	process.env.NODE_ENV === "production"
 		? process.env.MONGO_URI // Production uchun masofaviy MongoDB
 		: "mongodb://127.0.0.1:27017/mini_crm_db"; // Lokal uchun
+console.log("Current NODE_ENV:", process.env.NODE_ENV);
 
 mongoose
 	.connect(mongooseURI, {
 		useNewUrlParser: true,
 		useUnifiedTopology: true,
-		serverSelectionTimeoutMS: 2000, // 2 soniya
+		serverSelectionTimeoutMS: 5000, // 5 soniya
 		socketTimeoutMS: 45000, // 45 soniya
 	})
 	.then(() => console.log("MongoDB connected successfully!"))
