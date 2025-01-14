@@ -2,26 +2,58 @@ import ChatRoom from "../models/ChatRoom.js";
 import Message from "../models/Message.js";
 
 
-// SEND MESSAGES 
+// SEND MESSAGES
+// export const sendMessage = async (req, res) => {
+// 	try {
+// 		const { chatRoomId, content, type } = req.body;
+
+// 		const message = await Message.create({
+// 			chatRoomId,
+// 			sender: req.user.id,
+// 			content,
+// 			type,
+// 		});
+
+// 		res
+// 			.status(201)
+// 			.json({ message: "Xabar muvaffaqiyatli yuborildi", message });
+// 	} catch (error) {
+// 		console.error("Error sending message:", error);
+// 		res.status(500).json({ error: "Xabarni yuborishda xatolik yuz berdi." });
+// 	}
+// };
 export const sendMessage = async (req, res) => {
 	try {
-		const { chatRoomId, content, type } = req.body;
+		const { chatRoomId, message } = req.body;
 
-		const message = await Message.create({
+		// Chat xonasini bazadan topish
+		const chatRoom = await ChatRoom.findById(chatRoomId);
+		if (!chatRoom) {
+			return res.status(404).json({ error: "Chat room not found" });
+		}
+
+		// Yangi xabarni yaratish
+		const newMessage = await Message.create({
 			chatRoomId,
-			sender: req.user.id,
-			content,
-			type,
+			content: message,
+			sender: req.user.id, // Auth middleware orqali olingan foydalanuvchi
 		});
 
-		res
-			.status(201)
-			.json({ message: "Xabar muvaffaqiyatli yuborildi", message });
+		// Xabarni chat xonasiga qo'shish
+		chatRoom.messages.push(newMessage._id);
+		await chatRoom.save();
+
+		// Javob qaytarish
+		res.status(201).json({
+			message: "Message sent successfully",
+			data: newMessage,
+		});
 	} catch (error) {
-		console.error("Error sending message:", error);
-		res.status(500).json({ error: "Xabarni yuborishda xatolik yuz berdi." });
+		console.error(error);
+		res.status(500).json({ error: "Something went wrong" });
 	}
 };
+
 
 // GET MESSAGES
 export const getMessagesForChatRoom = async (req, res) => {

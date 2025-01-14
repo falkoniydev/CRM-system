@@ -308,12 +308,18 @@ router.put("/message/:messageId", authMiddleware, editMessage);
  *               file:
  *                 type: string
  *                 format: binary
- * 				chatRoomId:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ * 				 chatRoomId:
  *                 type: string
  *                 example: chat_id
  *     responses:
  *       201:
  *         description: Fayl muvaffaqiyatli yuklandi.
+ *       404:
+ *         description: Fayl topilmadi.
  */
 router.post(
 	"/upload-file",
