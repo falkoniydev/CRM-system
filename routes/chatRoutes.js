@@ -73,7 +73,7 @@ router.post(
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /**
  * @swagger
- * /api/chat/add-member:
+ * /api/chat/add-member/:chatRoomId:
  *   put:
  *     summary: Chatga yangi a'zolar qo'shish
  *     tags: [Real-Time Chat]
@@ -100,7 +100,11 @@ router.post(
  *       404:
  *         description: Chat topilmadi.
  */
-router.put("/add-member", authMiddleware, addMemberToChatRoom);
+router.put(
+	"/api/chat/add-member/:chatRoomId",
+	authMiddleware,
+	addMemberToChatRoom
+);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // GET ALL CHAT ROOMS
@@ -143,14 +147,14 @@ router.get("/all", authMiddleware, getAllChatRooms);
  *       404:
  *         description: Chat topilmadi.
  */
-router.delete("/:chatRoomId", authMiddleware, deleteChatRoom);
+router.delete("/api/chat/:chatRoomId", authMiddleware, deleteChatRoom);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // DELETE A MEMBER FROM GROUP CHAT
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /**
  * @swagger
- * /api/chat/remove-member:
+ * /api/chat/:chatRoomId/members/:memberId:
  *   delete:
  *     summary: Chatdan a'zoni o'chirish
  *     tags: [Real-Time Chat]
@@ -175,7 +179,11 @@ router.delete("/:chatRoomId", authMiddleware, deleteChatRoom);
  *       404:
  *         description: Chat yoki a'zo topilmadi.
  */
-router.delete("/remove-member", authMiddleware, removeMemberFromChatRoom);
+router.delete(
+	"/api/chat/:chatRoomId/members/:memberId",
+	authMiddleware,
+	removeMemberFromChatRoom
+);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // SEND MESSAGE
@@ -205,7 +213,7 @@ router.delete("/remove-member", authMiddleware, removeMemberFromChatRoom);
  *       201:
  *         description: Xabar muvaffaqiyatli yuborildi.
  */
-router.post("/send-message", authMiddleware, sendMessage);
+router.post("/api/chat/send-message", authMiddleware, sendMessage);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // DELETE MESSAGE IN THE CHAT
@@ -290,6 +298,9 @@ router.put("/message/:messageId", authMiddleware, editMessage);
  *               file:
  *                 type: string
  *                 format: binary
+ * 				chatRoomId:
+ *                 type: string
+ *                 example: chat_id
  *     responses:
  *       201:
  *         description: Fayl muvaffaqiyatli yuklandi.
