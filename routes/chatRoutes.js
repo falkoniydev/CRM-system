@@ -216,7 +216,7 @@ router.delete(
  *               chatRoomId:
  *                 type: string
  *                 example: chat_id
- *               message:
+ *               content:
  *                 type: string
  *                 example: Hello Team!
  *     responses:
@@ -276,7 +276,7 @@ router.delete("/message/:messageId", authMiddleware, deleteMessage);
  *           schema:
  *             type: object
  *             properties:
- *               message:
+ *               newContent:
  *                 type: string
  *                 example: Yangilangan xabar matni
  *     responses:
@@ -305,16 +305,12 @@ router.put("/message/:messageId", authMiddleware, editMessage);
  *           schema:
  *             type: object
  *             properties:
+ *               chatRoomId:
+ *                 type: string
+ *                 example: 678520dea8ffbb5a0305b76c
  *               file:
  *                 type: string
  *                 format: binary
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- * 				 chatRoomId:
- *                 type: string
- *                 example: chat_id
  *     responses:
  *       201:
  *         description: Fayl muvaffaqiyatli yuklandi.
