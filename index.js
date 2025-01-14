@@ -109,6 +109,6 @@ const PORT = process.env.PORT || 5000;
 const BASE_URL = process.env.BASE_URL;
 
 // Swagger-ni ishga tushirish
-swaggerDocs(app, PORT);
+swaggerDocs(app, BASE_URL);
 
 server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
