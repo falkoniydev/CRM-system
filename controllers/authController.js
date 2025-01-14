@@ -126,7 +126,7 @@ export const forgotPassword = async (req, res) => {
 };
 
 // RESET PASSWORD
-router.post("/reset-password", async (req, res) => {
+export const resetPassword = async (req, res) => {
 	const { newPassword } = req.body; // Body faqat newPassword qabul qiladi
 	const token = req.header("Authorization")?.replace("Bearer ", ""); // Tokenni Header'dan olish
 
@@ -152,4 +152,4 @@ router.post("/reset-password", async (req, res) => {
 	} catch (err) {
 		res.status(400).json({ error: "Invalid or expired token" });
 	}
-});
+};
