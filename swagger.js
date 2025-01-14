@@ -15,7 +15,7 @@ const options = {
 				description: "Local server",
 			},
 			{
-				url: "https://crm-system.onrender.com",
+				url: "https://crm-system-0qaz.onrender.com",
 				description: "Production server",
 			},
 		],
