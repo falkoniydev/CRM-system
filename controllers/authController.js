@@ -126,14 +126,20 @@ export const forgotPassword = async (req, res) => {
 };
 
 // RESET PASSWORD
-export const resetPassword = async (req, res) => {
-	const { token, newPassword } = req.body;
+router.post("/reset-password", async (req, res) => {
+	const { newPassword } = req.body; // Body faqat newPassword qabul qiladi
+	const token = req.header("Authorization")?.replace("Bearer ", ""); // Tokenni Header'dan olish
+
+	if (!token) {
+		return res.status(401).json({ error: "No token provided" });
+	}
 
 	try {
 		// Tokenni tekshirish
 		const decoded = jwt.verify(token, process.env.JWT_SECRET);
-		const user = await User.findById(decoded.id);
 
+		// Foydalanuvchini bazadan topish
+		const user = await User.findById(decoded.id);
 		if (!user) {
 			return res.status(404).json({ error: "User not found" });
 		}
@@ -142,8 +148,8 @@ export const resetPassword = async (req, res) => {
 		user.password = newPassword;
 		await user.save();
 
-		res.json({ message: "Password reset successful" });
+		res.status(200).json({ message: "Password reset successfully" });
 	} catch (err) {
 		res.status(400).json({ error: "Invalid or expired token" });
 	}
-};
+});

@@ -151,6 +151,8 @@ router.post("/forgot-password", forgotPassword);
  *   post:
  *     summary: Parolni tiklash
  *     tags: [Auth Service]
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -158,18 +160,20 @@ router.post("/forgot-password", forgotPassword);
  *           schema:
  *             type: object
  *             properties:
- *               token:
- *                 type: string
- *                 example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
  *               newPassword:
  *                 type: string
- *                 example: newpassword123
+ *                 example: "newpassword123"
  *     responses:
  *       200:
  *         description: Parol muvaffaqiyatli tiklandi.
  *       400:
- *         description: Token yaroqsiz yoki eskirgan.
+ *         description: Yaroqsiz yoki eskirgan token.
+ *       401:
+ *         description: Token mavjud emas.
+ *       404:
+ *         description: Foydalanuvchi topilmadi.
  */
+
 router.post("/reset-password", resetPassword);
 
 export default router;
