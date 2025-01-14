@@ -11,16 +11,30 @@ const options = {
 		},
 		servers: [
 			{
-				url: "http://localhost:5000", // Local URL
+				url: "http://localhost:5000",
 				description: "Local server",
 			},
 			{
-				url: "https://crm-system.onrender.com", // Replace with your Render URL
+				url: "https://crm-system.onrender.com",
 				description: "Production server",
 			},
 		],
+		components: {
+			securitySchemes: {
+				bearerAuth: {
+					type: "http",
+					scheme: "bearer",
+					bearerFormat: "JWT",
+				},
+			},
+		},
+		security: [
+			{
+				bearerAuth: [],
+			},
+		],
 	},
-	apis: ["./routes/*.js"], // API-laringiz joylashgan fayl yo'li
+	apis: ["./routes/*.js"], // API joylashgan fayl yo'li
 };
 
 const swaggerSpec = swaggerJsdoc(options);
