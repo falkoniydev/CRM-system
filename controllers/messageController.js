@@ -1,59 +1,57 @@
 import ChatRoom from "../models/ChatRoom.js";
 import Message from "../models/Message.js";
 
-
 // SEND MESSAGES
-// export const sendMessage = async (req, res) => {
-// 	try {
-// 		const { chatRoomId, content, type } = req.body;
-
-// 		const message = await Message.create({
-// 			chatRoomId,
-// 			sender: req.user.id,
-// 			content,
-// 			type,
-// 		});
-
-// 		res
-// 			.status(201)
-// 			.json({ message: "Xabar muvaffaqiyatli yuborildi", message });
-// 	} catch (error) {
-// 		console.error("Error sending message:", error);
-// 		res.status(500).json({ error: "Xabarni yuborishda xatolik yuz berdi." });
-// 	}
-// };
 export const sendMessage = async (req, res) => {
 	try {
-		const { chatRoomId, message } = req.body;
+		const { chatRoomId, content, type } = req.body;
 
-		// Chat xonasini bazadan topish
-		const chatRoom = await ChatRoom.findById(chatRoomId);
-		if (!chatRoom) {
-			return res.status(404).json({ error: "Chat room not found" });
-		}
-
-		// Yangi xabarni yaratish
-		const newMessage = await Message.create({
+		const message = await Message.create({
 			chatRoomId,
-			content: message,
-			sender: req.user.id, // Auth middleware orqali olingan foydalanuvchi
+			sender: req.user.id,
+			content,
+			type,
 		});
 
-		// Xabarni chat xonasiga qo'shish
-		chatRoom.messages.push(newMessage._id);
-		await chatRoom.save();
-
-		// Javob qaytarish
-		res.status(201).json({
-			message: "Message sent successfully",
-			data: newMessage,
-		});
+		res
+			.status(201)
+			.json({ message: "Xabar muvaffaqiyatli yuborildi", message });
 	} catch (error) {
-		console.error(error);
-		res.status(500).json({ error: "Something went wrong" });
+		console.error("Error sending message:", error);
+		res.status(500).json({ error: "Xabarni yuborishda xatolik yuz berdi." });
 	}
 };
+// export const sendMessage = async (req, res) => {
+// 	try {
+// 		const { chatRoomId, message } = req.body;
 
+// 		// Chat xonasini bazadan topish
+// 		const chatRoom = await ChatRoom.findById(chatRoomId);
+// 		if (!chatRoom) {
+// 			return res.status(404).json({ error: "Chat room not found" });
+// 		}
+
+// 		// Yangi xabarni yaratish
+// 		const newMessage = await Message.create({
+// 			chatRoomId,
+// 			content: message,
+// 			sender: req.user.id, // Auth middleware orqali olingan foydalanuvchi
+// 		});
+
+// 		// Xabarni chat xonasiga qo'shish
+// 		chatRoom.messages.push(newMessage._id);
+// 		await chatRoom.save();
+
+// 		// Javob qaytarish
+// 		res.status(201).json({
+// 			message: "Message sent successfully",
+// 			data: newMessage,
+// 		});
+// 	} catch (error) {
+// 		console.error(error);
+// 		res.status(500).json({ error: "Something went wrong" });
+// 	}
+// };
 
 // GET MESSAGES
 export const getMessagesForChatRoom = async (req, res) => {
@@ -77,34 +75,34 @@ export const getMessagesForChatRoom = async (req, res) => {
 
 // UPDATE MESSAGES
 export const editMessage = async (req, res) => {
-    try {
-        const { messageId } = req.params;
-        const { newContent } = req.body;
+	try {
+		const { messageId } = req.params;
+		const { newContent } = req.body;
 
-        // Yangi xabar matni mavjudligini tekshirish
-        if (!newContent || newContent.trim() === "") {
-            return res.status(400).json({ error: "New content cannot be empty" });
-        }
+		// Yangi xabar matni mavjudligini tekshirish
+		if (!newContent || newContent.trim() === "") {
+			return res.status(400).json({ error: "New content cannot be empty" });
+		}
 
-        // Bazada xabarni yangilash
-        const updatedMessage = await Message.findByIdAndUpdate(
-            messageId,
-            { content: newContent, edited: true },
-            { new: true } // Yangilangan hujjatni qaytaradi
-        );
+		// Bazada xabarni yangilash
+		const updatedMessage = await Message.findByIdAndUpdate(
+			messageId,
+			{ content: newContent, edited: true },
+			{ new: true } // Yangilangan hujjatni qaytaradi
+		);
 
-        if (!updatedMessage) {
-            return res.status(404).json({ error: "Message not found" });
-        }
+		if (!updatedMessage) {
+			return res.status(404).json({ error: "Message not found" });
+		}
 
-        res.status(200).json({
-            message: "Message updated successfully",
-            updatedMessage,
-        });
-    } catch (error) {
-        console.error("Error editing message:", error);
-        res.status(500).json({ error: "Failed to edit message" });
-    }
+		res.status(200).json({
+			message: "Message updated successfully",
+			updatedMessage,
+		});
+	} catch (error) {
+		console.error("Error editing message:", error);
+		res.status(500).json({ error: "Failed to edit message" });
+	}
 };
 
 // DELETE MESSAGES
@@ -196,5 +194,3 @@ export const downloadChatFile = async (req, res) => {
 		res.status(500).json({ error: "Xatolik yuz berdi." });
 	}
 };
-
-
