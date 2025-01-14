@@ -79,6 +79,13 @@ router.post(
  *     tags: [Real-Time Chat]
  *     security:
  *       - bearerAuth: []
+ * 	   parameters:
+ *       - in: path
+ *         name: chatRoomId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Chat xonasi ID*
  *     requestBody:
  *       required: true
  *       content:
@@ -86,9 +93,6 @@ router.post(
  *           schema:
  *             type: object
  *             properties:
- *               chatRoomId:
- *                 type: string
- *                 example: chat_id
  *               members:
  *                 type: array
  *                 items:
@@ -147,7 +151,7 @@ router.get("/all", authMiddleware, getAllChatRooms);
  *       404:
  *         description: Chat topilmadi.
  */
-router.delete("/api/chat/:chatRoomId", authMiddleware, deleteChatRoom);
+router.delete("/:chatRoomId", authMiddleware, deleteChatRoom);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // DELETE A MEMBER FROM GROUP CHAT
@@ -160,19 +164,25 @@ router.delete("/api/chat/:chatRoomId", authMiddleware, deleteChatRoom);
  *     tags: [Real-Time Chat]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: chatRoomId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Chat xonasi ID
+ *         - in: path
+ *         name: memberId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Guruh a'zosi ID
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
- *             properties:
- *               chatRoomId:
- *                 type: string
- *                 example: chat_id
- *               memberId:
- *                 type: string
- *                 example: user_id
  *     responses:
  *       200:
  *         description: A'zo muvaffaqiyatli o'chirildi.
@@ -213,7 +223,7 @@ router.delete(
  *       201:
  *         description: Xabar muvaffaqiyatli yuborildi.
  */
-router.post("/api/chat/send-message", authMiddleware, sendMessage);
+router.post("/send-message", authMiddleware, sendMessage);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // DELETE MESSAGE IN THE CHAT
