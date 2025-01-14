@@ -1,5 +1,13 @@
+/**
+ * @swagger
+ * tags:
+ *   name: File Management
+ *   description: Fayllarni boshqarish uchun API
+ */
+
 import express from "express";
 import multer from "multer";
+import authMiddleware from "../middlewares/authMiddleware.js";
 import {
 	uploadFile,
 	downloadFile,
@@ -16,7 +24,35 @@ const upload = multer({
 
 const router = express.Router();
 
-// Fayl yuklash endpointi
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// FILE UPLOADING
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/**
+ * @swagger
+ * /api/files/upload:
+ *   post:
+ *     summary: Fayl yuklash
+ *     tags: [File Management]
+ *     security:
+ *       - bearerAuth: [] # Token talab qilinadi
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       200:
+ *         description: Fayl muvaffaqiyatli yuklandi.
+ *       400:
+ *         description: Yuklashda xatolik.
+ *       500:
+ *         description: Server xatoligi.
+ */
 router.post(
 	"/upload",
 	upload.single("file"),
@@ -27,13 +63,118 @@ router.post(
 	uploadFile
 );
 
-// Faylni yuklab olish endpointi
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// FILE DONWLAODING
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/**
+ * @swagger
+ * /api/files/download/{taskId}/{filename}:
+ *   get:
+ *     summary: Faylni yuklab olish
+ *     tags: [File Management]
+ *     security:
+ *       - bearerAuth: [] # Token talab qilinadi
+ *     parameters:
+ *       - in: path
+ *         name: taskId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Fayl tegishli bo'lgan task ID
+ *       - in: path
+ *         name: filename
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Yuklab olinadigan fayl nomi
+ *     responses:
+ *       200:
+ *         description: Fayl muvaffaqiyatli yuklandi.
+ *         content:
+ *           application/octet-stream:
+ *             schema:
+ *               type: string
+ *               format: binary
+ *       404:
+ *         description: Fayl topilmadi.
+ *       500:
+ *         description: Server xatoligi.
+ */
 router.get("/download/:taskId/:filename", downloadFile);
 
-// Faylni o'chirish endpointi
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// DELETE FILE
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/**
+ * @swagger
+ * /api/files/delete/{taskId}/{filename}:
+ *   delete:
+ *     summary: Faylni o'chirish
+ *     tags: [File Management]
+ *     security:
+ *       - bearerAuth: [] # Token talab qilinadi
+ *     parameters:
+ *       - in: path
+ *         name: taskId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Fayl tegishli bo'lgan task ID
+ *       - in: path
+ *         name: filename
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: O'chiriladigan fayl nomi
+ *     responses:
+ *       200:
+ *         description: Fayl muvaffaqiyatli o'chirildi.
+ *       404:
+ *         description: Fayl topilmadi.
+ *       500:
+ *         description: Server xatoligi.
+ */
 router.delete("/delete/:taskId/:filename", deleteFile);
 
-// Task uchun yuklangan fayllar ro'yxatini olish endpointi
-router.get("/list/:taskId", getFileList);
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// GET FILE LIST
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/**
+ * @swagger
+ * /api/files/list/{taskId}:
+ *   get:
+ *     summary: Task uchun yuklangan fayllar ro'yxatini olish
+ *     tags: [File Management]
+ *     security:
+ *       - bearerAuth: [] # Token talab qilinadi
+ *     parameters:
+ *       - in: path
+ *         name: taskId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Task ID
+ *     responses:
+ *       200:
+ *         description: Fayllar ro'yxati muvaffaqiyatli qaytarildi.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   filename:
+ *                     type: string
+ *                   size:
+ *                     type: number
+ *                   contentType:
+ *                     type: string
+ *       404:
+ *         description: Task yoki fayllar topilmadi.
+ *       500:
+ *         description: Server xatoligi.
+ */
+router.get("/list/:taskId", authMiddleware, getFileList);
 
 export default router;
