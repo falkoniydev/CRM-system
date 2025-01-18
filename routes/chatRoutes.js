@@ -29,9 +29,6 @@ const upload = multer({ dest: "uploads/chat/" });
 
 const router = express.Router();
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// CREATE GROUP CHAT
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /**
  * @swagger
  * /api/chat/create:
@@ -57,9 +54,9 @@ const router = express.Router();
  *                 example: ["user1_id", "user2_id"]
  *     responses:
  *       201:
- *         description: Chat xonasi muvaffaqiyatli yaratildi.
+ *         description: Chat xonasi muvaffaqiyatli yaratildi
  *       400:
- *         description: Xato ma'lumotlar taqdim etilgan.
+ *         description: Xato ma'lumotlar taqdim etilgan
  */
 router.post(
 	"/create",
@@ -68,24 +65,21 @@ router.post(
 	createChatRoom
 );
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// ADD MEMBERS TO GROUP CHAT
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /**
  * @swagger
- * /api/chat/add-member/:chatRoomId:
+ * /api/chat/add-member/{chatRoomId}:
  *   put:
  *     summary: Chatga yangi a'zolar qo'shish
  *     tags: [Real-Time Chat]
  *     security:
  *       - bearerAuth: []
- * 	   parameters:
+ *     parameters:
  *       - in: path
  *         name: chatRoomId
  *         required: true
  *         schema:
  *           type: string
- *         description: Chat xonasi ID*
+ *         description: Chat xonasi ID
  *     requestBody:
  *       required: true
  *       content:
@@ -100,19 +94,12 @@ router.post(
  *                 example: ["new_user_id1", "new_user_id2"]
  *     responses:
  *       200:
- *         description: A'zolar muvaffaqiyatli qo'shildi.
+ *         description: A'zolar muvaffaqiyatli qo'shildi
  *       404:
- *         description: Chat topilmadi.
+ *         description: Chat topilmadi
  */
-router.put(
-	"/api/chat/add-member/:chatRoomId",
-	authMiddleware,
-	addMemberToChatRoom
-);
+router.put("/add-member/:chatRoomId", authMiddleware, addMemberToChatRoom);
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// GET ALL CHAT ROOMS
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /**
  * @swagger
  * /api/chat/all:
@@ -123,13 +110,10 @@ router.put(
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: Chat xonalar ro'yxati.
+ *         description: Chat xonalar ro'yxati
  */
 router.get("/all", authMiddleware, getAllChatRooms);
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// DELETE CHAT ROOM
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /**
  * @swagger
  * /api/chat/{chatRoomId}:
@@ -147,18 +131,15 @@ router.get("/all", authMiddleware, getAllChatRooms);
  *         description: Chat xonasi ID
  *     responses:
  *       200:
- *         description: Chat muvaffaqiyatli o'chirildi.
+ *         description: Chat muvaffaqiyatli o'chirildi
  *       404:
- *         description: Chat topilmadi.
+ *         description: Chat topilmadi
  */
 router.delete("/:chatRoomId", authMiddleware, deleteChatRoom);
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// DELETE A MEMBER FROM GROUP CHAT
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /**
  * @swagger
- * /api/chat/:chatRoomId/members/:memberId:
+ * /api/chat/{chatRoomId}/members/{memberId}:
  *   delete:
  *     summary: Chatdan a'zoni o'chirish
  *     tags: [Real-Time Chat]
@@ -171,33 +152,24 @@ router.delete("/:chatRoomId", authMiddleware, deleteChatRoom);
  *         schema:
  *           type: string
  *         description: Chat xonasi ID
- *         - in: path
+ *       - in: path
  *         name: memberId
  *         required: true
  *         schema:
  *           type: string
  *         description: Guruh a'zosi ID
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
  *     responses:
  *       200:
- *         description: A'zo muvaffaqiyatli o'chirildi.
+ *         description: A'zo muvaffaqiyatli o'chirildi
  *       404:
- *         description: Chat yoki a'zo topilmadi.
+ *         description: Chat yoki a'zo topilmadi
  */
 router.delete(
-	"/api/chat/:chatRoomId/members/:memberId",
+	"/:chatRoomId/members/:memberId",
 	authMiddleware,
 	removeMemberFromChatRoom
 );
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// SEND MESSAGE
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /**
  * @swagger
  * /api/chat/send-message:
@@ -221,13 +193,10 @@ router.delete(
  *                 example: Hello Team!
  *     responses:
  *       201:
- *         description: Xabar muvaffaqiyatli yuborildi.
+ *         description: Xabar muvaffaqiyatli yuborildi
  */
 router.post("/send-message", authMiddleware, sendMessage);
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// DELETE MESSAGE IN THE CHAT
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /**
  * @swagger
  * /api/chat/message/{messageId}:
@@ -245,15 +214,12 @@ router.post("/send-message", authMiddleware, sendMessage);
  *         description: Xabar ID
  *     responses:
  *       200:
- *         description: Xabar muvaffaqiyatli o'chirildi.
+ *         description: Xabar muvaffaqiyatli o'chirildi
  *       404:
- *         description: Xabar topilmadi.
+ *         description: Xabar topilmadi
  */
 router.delete("/message/:messageId", authMiddleware, deleteMessage);
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// EDIT MESSAGE
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /**
  * @swagger
  * /api/chat/message/{messageId}:
@@ -281,15 +247,12 @@ router.delete("/message/:messageId", authMiddleware, deleteMessage);
  *                 example: Yangilangan xabar matni
  *     responses:
  *       200:
- *         description: Xabar muvaffaqiyatli tahrirlandi.
+ *         description: Xabar muvaffaqiyatli tahrirlandi
  *       404:
- *         description: Xabar topilmadi.
+ *         description: Xabar topilmadi
  */
 router.put("/message/:messageId", authMiddleware, editMessage);
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// UPLOAD FILES TO CHAT
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /**
  * @swagger
  * /api/chat/upload-file:
@@ -313,9 +276,9 @@ router.put("/message/:messageId", authMiddleware, editMessage);
  *                 format: binary
  *     responses:
  *       201:
- *         description: Fayl muvaffaqiyatli yuklandi.
+ *         description: Fayl muvaffaqiyatli yuklandi
  *       404:
- *         description: Fayl topilmadi.
+ *         description: Fayl topilmadi
  */
 router.post(
 	"/upload-file",
@@ -324,9 +287,6 @@ router.post(
 	uploadChatFile
 );
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// DOWNLOAD FILES FROM CHAT
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /**
  * @swagger
  * /api/chat/download-file/{chatRoomId}/{messageId}:
@@ -350,9 +310,9 @@ router.post(
  *         description: Xabar ID
  *     responses:
  *       200:
- *         description: Fayl muvaffaqiyatli yuklab olindi.
+ *         description: Fayl muvaffaqiyatli yuklab olindi
  *       404:
- *         description: Fayl topilmadi.
+ *         description: Fayl topilmadi
  */
 router.get(
 	"/download-file/:chatRoomId/:messageId",
@@ -360,9 +320,6 @@ router.get(
 	downloadChatFile
 );
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// GET MESSAGES IN CHATROOM
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /**
  * @swagger
  * /api/chat/messages/{chatRoomId}:
@@ -380,7 +337,7 @@ router.get(
  *         description: Chat xonasi ID
  *     responses:
  *       200:
- *         description: Xabarlar muvaffaqiyatli qaytarildi.
+ *         description: Xabarlar muvaffaqiyatli qaytarildi
  *         content:
  *           application/json:
  *             schema:
@@ -411,9 +368,9 @@ router.get(
  *                       updatedAt:
  *                         type: string
  *       404:
- *         description: Xabarlar topilmadi.
+ *         description: Xabarlar topilmadi
  *       500:
- *         description: Server xatosi.
+ *         description: Server xatosi
  */
 router.get("/messages/:chatRoomId", authMiddleware, getMessagesForChatRoom);
 

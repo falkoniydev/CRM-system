@@ -21,6 +21,14 @@ const messageSchema = new mongoose.Schema(
 			enum: ["text", "file"],
 			default: "text",
 		},
+		// Qo'shimcha fayl maydonlari
+		fileDetails: {
+			originalName: String,
+			fileName: String,
+			mimeType: String,
+			size: Number,
+			path: String,
+		},
 		edited: {
 			type: Boolean,
 			default: false,

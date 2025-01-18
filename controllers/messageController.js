@@ -21,37 +21,6 @@ export const sendMessage = async (req, res) => {
 		res.status(500).json({ error: "Xabarni yuborishda xatolik yuz berdi." });
 	}
 };
-// export const sendMessage = async (req, res) => {
-// 	try {
-// 		const { chatRoomId, message } = req.body;
-
-// 		// Chat xonasini bazadan topish
-// 		const chatRoom = await ChatRoom.findById(chatRoomId);
-// 		if (!chatRoom) {
-// 			return res.status(404).json({ error: "Chat room not found" });
-// 		}
-
-// 		// Yangi xabarni yaratish
-// 		const newMessage = await Message.create({
-// 			chatRoomId,
-// 			content: message,
-// 			sender: req.user.id, // Auth middleware orqali olingan foydalanuvchi
-// 		});
-
-// 		// Xabarni chat xonasiga qo'shish
-// 		chatRoom.messages.push(newMessage._id);
-// 		await chatRoom.save();
-
-// 		// Javob qaytarish
-// 		res.status(201).json({
-// 			message: "Message sent successfully",
-// 			data: newMessage,
-// 		});
-// 	} catch (error) {
-// 		console.error(error);
-// 		res.status(500).json({ error: "Something went wrong" });
-// 	}
-// };
 
 // GET MESSAGES
 export const getMessagesForChatRoom = async (req, res) => {
@@ -129,43 +98,41 @@ export const uploadChatFile = async (req, res) => {
 	try {
 		const { chatRoomId } = req.body;
 
-		// Fayl yuklanganligini tekshirish
 		if (!req.file) {
 			return res.status(400).json({
-				error: "Fayl yuklanmadi yoki hajmi oshib ketdi (maksimal 10 MB).",
+				error: "Fayl yuklanmadi yoki hajmi oshib ketdi.",
 			});
 		}
 
-		// Chat room mavjudligini tekshirish
 		const chatRoom = await ChatRoom.findById(chatRoomId);
 		if (!chatRoom) {
 			return res.status(404).json({ error: "Chat room topilmadi." });
 		}
 
 		// Fayl ma'lumotlarini saqlash
-		const fileData = {
-			filename: req.file.filename,
-			originalname: req.file.originalname,
-			mimetype: req.file.mimetype,
-			path: req.file.path,
-			size: req.file.size,
-		};
-
-		// Xabarni fayl bilan birga saqlash
 		const message = await Message.create({
 			chatRoomId,
 			sender: req.user.id,
-			content: fileData.path,
 			type: "file",
+			content: req.file.originalname, // original fayl nomi
+			fileDetails: {
+				originalName: req.file.originalname,
+				fileName: req.file.filename,
+				mimeType: req.file.mimetype,
+				size: req.file.size,
+				path: req.file.path,
+			},
 		});
 
+		await message.populate("sender", "name email");
+
 		res.status(200).json({
-			message: "Fayl muvaffaqiyatli chatga yuklandi.",
+			message: "Fayl muvaffaqiyatli yuklandi",
 			chatMessage: message,
 		});
 	} catch (error) {
-		console.error("Chatga fayl yuklashda xatolik:", error);
-		res.status(500).json({ error: "Xatolik yuz berdi." });
+		console.error("Faylni yuklashda xatolik:", error);
+		res.status(500).json({ error: "Xatolik yuz berdi" });
 	}
 };
 
@@ -174,20 +141,39 @@ export const downloadChatFile = async (req, res) => {
 	try {
 		const { chatRoomId, messageId } = req.params;
 
-		// Xabarni tekshirish
-		const message = await Message.findById(messageId);
+		// Xabarni tekshirish va sender ma'lumotlarini olish
+		const message = await Message.findById(messageId).populate(
+			"sender",
+			"name email"
+		);
+
 		if (!message || message.chatRoomId.toString() !== chatRoomId) {
 			return res.status(404).json({ error: "Xabar yoki fayl topilmadi." });
 		}
 
+		if (!message.fileDetails || !message.fileDetails.path) {
+			return res.status(404).json({ error: "Fayl topilmadi." });
+		}
+
+		// Faylning MIME type va original nomini o'rnatish
+		const filePath = message.fileDetails.path;
+		const originalFileName = message.fileDetails.originalName;
+		const mimeType = message.fileDetails.mimeType;
+
+		// Response headerlarini to'g'ri o'rnatish
+		res.setHeader("Content-Type", mimeType);
+		res.setHeader(
+			"Content-Disposition",
+			`attachment; filename="${originalFileName}"`
+		);
+
 		// Faylni yuborish
-		res.download(message.content, (err) => {
-			if (err) {
-				console.error("Faylni yuklashda xatolik:", err);
-				res
-					.status(500)
-					.json({ error: "Faylni yuklab olishda xatolik yuz berdi." });
-			}
+		res.sendFile(filePath, {
+			root: "./", // yoki fayllar saqlanadigan to'liq yo'l
+			headers: {
+				"Content-Type": mimeType,
+				"Content-Disposition": `attachment; filename="${originalFileName}"`,
+			},
 		});
 	} catch (error) {
 		console.error("Faylni yuklab olishda xatolik:", error);
