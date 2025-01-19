@@ -1,49 +1,80 @@
+// controllers/taskController.js
 import Task from "../models/Task.js";
 import User from "../models/User.js";
 import { logActivity } from "../utils/logActivity.js";
 import { sendEmail } from "../utils/emailNotifications.js";
-import moment from "moment-timezone";
 
 // Create new task
 export const createTask = async (req, res) => {
-	const { title, description, assignedTo, dueDate } = req.body;
-
-	// Vaqtni Toshkent zonasi bo‘yicha olish
-	const createdAt = moment().tz("Asia/Tashkent").toDate();
-
 	try {
+		const { title, description, assignedTo, dueDate, time, priority, status } =
+			req.body;
+
+		// Tayinlangan userni tekshirish
+		const assignedUser = await User.findById(assignedTo);
+		if (!assignedUser) {
+			return res
+				.status(404)
+				.json({ error: "Tayinlanadigan foydalanuvchi topilmadi" });
+		}
+
+		// DueDate validatsiyasi
+		let parsedDate;
+		try {
+			parsedDate = new Date(dueDate);
+			if (isNaN(parsedDate.getTime())) {
+				return res
+					.status(400)
+					.json({ error: "Sanani to'g'ri formatda kiriting (YYYY-MM-DD)" });
+			}
+		} catch (error) {
+			return res
+				.status(400)
+				.json({ error: "Sanani to'g'ri formatda kiriting (YYYY-MM-DD)" });
+		}
+
+		// Time validatsiyasi
+		const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/;
+		if (!timeRegex.test(time)) {
+			return res
+				.status(400)
+				.json({ error: "Vaqtni to'g'ri formatda kiriting (HH:mm)" });
+		}
+
 		const task = new Task({
-			...req.body,
 			title,
 			description,
 			assignedTo,
-			dueDate,
-			createdAt, // Local vaqt bilan saqlash
+			status: status || "pending",
+			priority: priority || "medium",
+			dueDate: {
+				date: parsedDate,
+				time,
+			},
 			createdBy: req.user.id,
 		});
+
 		await task.save();
-		await task.populate("assignedTo", "name email role"); // `assignedTo` to'ldiriladi
+		await task.populate([
+			{ path: "assignedTo", select: "name email" },
+			{ path: "createdBy", select: "name email" },
+		]);
 
 		// Log yozish
 		await logActivity("task_created", "Task", task._id, req.user.id);
 
 		// Email yuborish
-		const assignedUser = await User.findById(assignedTo);
-		if (assignedUser) {
-			const subject = "Yangi vazifa tayinlandi";
-			const text = `Sizga yangi vazifa berildi: ${title}\nBatafsil ma'lumot uchun tizimga kiring.`;
-			await sendEmail(assignedUser.email, subject, text);
-		}
-
-		// Real-time event
-		io.emit("taskStatusUpdated", { taskId, status });
+		const subject = "Yangi vazifa tayinlandi";
+		const text = `Sizga yangi vazifa berildi: ${title}\nMuddat: ${dueDate} ${time}\nBatafsil ma'lumot uchun tizimga kiring.`;
+		await sendEmail(assignedUser.email, subject, text);
 
 		res.status(201).json({
-			message: "Task created successfully",
+			message: "Vazifa muvaffaqiyatli yaratildi",
 			task,
 		});
-	} catch (err) {
-		res.status(400).json({ error: err.message });
+	} catch (error) {
+		console.error("Vazifa yaratishda xatolik:", error);
+		res.status(400).json({ error: error.message });
 	}
 };
 
@@ -53,20 +84,34 @@ export const getAllTasks = async (req, res) => {
 		const {
 			status,
 			assignedTo,
-			sortBy,
-			order,
+			priority,
+			sortBy = "createdAt",
+			order = "desc",
 			page = 1,
 			limit = 10,
+			search,
 		} = req.query;
 
 		// Filtering
-		const filter = {};
+		const filter = { isActive: true };
 		if (status) filter.status = status;
 		if (assignedTo) filter.assignedTo = assignedTo;
+		if (priority) filter.priority = priority;
+		if (search) {
+			filter.$or = [
+				{ title: { $regex: search, $options: "i" } },
+				{ description: { $regex: search, $options: "i" } },
+			];
+		}
+
+		// Student faqat o'ziga tayinlangan vazifalarni ko'rishi mumkin
+		if (req.user.role === "student") {
+			filter.assignedTo = req.user.id;
+		}
 
 		// Sorting
 		const sortOptions = {};
-		if (sortBy) sortOptions[sortBy] = order === "desc" ? -1 : 1;
+		sortOptions[sortBy] = order === "desc" ? -1 : 1;
 
 		// Pagination
 		const skip = (page - 1) * limit;
@@ -82,88 +127,198 @@ export const getAllTasks = async (req, res) => {
 		const totalTasks = await Task.countDocuments(filter);
 
 		res.json({
-			message: "Tasks retrieved successfully",
+			message: "Vazifalar ro'yxati",
 			tasks,
-			totalTasks,
-			page: parseInt(page),
-			limit: parseInt(limit),
+			pagination: {
+				total: totalTasks,
+				page: parseInt(page),
+				pages: Math.ceil(totalTasks / limit),
+				limit: parseInt(limit),
+			},
 		});
-	} catch (err) {
-		res.status(500).json({ error: err.message });
+	} catch (error) {
+		console.error("Vazifalarni olishda xatolik:", error);
+		res.status(500).json({ error: error.message });
 	}
 };
 
-// Get single task by ID
+// Get task by ID
 export const getTaskById = async (req, res) => {
 	try {
-		const task = await Task.findById(req.params.id).populate(
-			"assignedTo createdBy",
-			"name email"
-		);
-		if (!task) return res.status(404).json({ error: "Task not found" });
+		const task = await Task.findOne({
+			_id: req.params.id,
+			isActive: true,
+		}).populate([
+			{ path: "assignedTo", select: "name email" },
+			{ path: "createdBy", select: "name email" },
+		]);
 
-		if (
-			req.user.role === "student" &&
-			task.assignedTo.toString() !== req.user.id
-		) {
-			return res.status(403).json({ error: "Access denied" });
+		if (!task) {
+			return res.status(404).json({ error: "Vazifa topilmadi" });
 		}
 
-		res.status(200).json(task);
-	} catch (err) {
-		res.status(500).json({ error: err.message });
+		// Student faqat o'ziga tayinlangan vazifani ko'ra oladi
+		if (
+			req.user.role === "student" &&
+			task.assignedTo._id.toString() !== req.user.id
+		) {
+			return res.status(403).json({ error: "Ruxsat berilmagan" });
+		}
+
+		res.json(task);
+	} catch (error) {
+		console.error("Vazifani olishda xatolik:", error);
+		res.status(500).json({ error: error.message });
 	}
 };
 
 // Update task
 export const updateTask = async (req, res) => {
 	try {
-		const task = await Task.findById(req.params.id);
-		if (!task) return res.status(404).json({ error: "Task not found" });
+		const { title, description, assignedTo, status, priority, dueDate, time } =
+			req.body;
 
+		// Avval taskni topamiz
+		const task = await Task.findOne({ _id: req.params.id, isActive: true });
+		if (!task) {
+			return res.status(404).json({ error: "Vazifa topilmadi" });
+		}
+
+		// Ruxsatlarni tekshirish
 		if (
 			req.user.role === "student" ||
 			(req.user.role === "teacher" && task.createdBy.toString() !== req.user.id)
 		) {
-			return res.status(403).json({ error: "Access denied" });
+			return res.status(403).json({ error: "Ruxsat berilmagan" });
 		}
 
-		Object.assign(task, req.body);
+		// AssignedTo user mavjudligini tekshirish
+		if (assignedTo) {
+			const assignedUser = await User.findById(assignedTo);
+			if (!assignedUser) {
+				return res
+					.status(404)
+					.json({ error: "Tayinlanadigan foydalanuvchi topilmadi" });
+			}
+		}
+
+		// Sana va vaqtni tekshirish
+		if (dueDate || time) {
+			if (dueDate) {
+				const parsedDate = new Date(dueDate);
+				if (isNaN(parsedDate.getTime())) {
+					return res
+						.status(400)
+						.json({ error: "Sanani to'g'ri formatda kiriting (YYYY-MM-DD)" });
+				}
+				task.dueDate.date = parsedDate;
+			}
+
+			if (time) {
+				const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/;
+				if (!timeRegex.test(time)) {
+					return res
+						.status(400)
+						.json({ error: "Vaqtni to'g'ri formatda kiriting (HH:mm)" });
+				}
+				task.dueDate.time = time;
+			}
+		}
+
+		// Boshqa fieldlarni yangilash
+		if (title) task.title = title;
+		if (description) task.description = description;
+		if (assignedTo) task.assignedTo = assignedTo;
+		if (status) task.status = status;
+		if (priority) task.priority = priority;
+
 		await task.save();
 
-		// Log yozish
+		// Populate qilib to'liq ma'lumotlar bilan qaytarish
+		await task.populate([
+			{ path: "assignedTo", select: "name email" },
+			{ path: "createdBy", select: "name email" },
+		]);
+
 		await logActivity("task_updated", "Task", task._id, req.user.id);
 
-		res.status(200).json({ message: "Task updated successfully", task });
-	} catch (err) {
-		res.status(500).json({ error: err.message });
+		// Email yuborish
+		if (task.assignedTo) {
+			const assignedUser = await User.findById(task.assignedTo);
+			if (assignedUser && assignedUser.email) {
+				const subject = "Vazifa yangilandi";
+				const text = `"${task.title}" vazifasida o'zgarishlar bo'ldi.\nIltimos, tizimga kirib tekshiring.`;
+				await sendEmail(assignedUser.email, subject, text);
+			}
+		}
+
+		res.json({
+			message: "Vazifa muvaffaqiyatli yangilandi",
+			task,
+		});
+	} catch (error) {
+		console.error("Vazifani yangilashda xatolik:", error);
+		res.status(500).json({ error: error.message });
 	}
 };
 
-// Delete a task
+// Delete task
 export const deleteTask = async (req, res) => {
 	try {
-		const task = await Task.findById(req.params.id);
+		const task = await Task.findOne({ _id: req.params.id, isActive: true });
+
 		if (!task) {
-			return res.status(404).json({ error: "Task not found" });
+			return res.status(404).json({ error: "Vazifa topilmadi" });
 		}
 
-		// Yangi funksiyadan foydalanamiz
-		await task.deleteOne();
+		// Soft delete
+		task.isActive = false;
+		await task.save();
 
 		// Log yozish
 		await logActivity("task_deleted", "Task", task._id, req.user.id);
 
-		// Email yuborish
-		const assignedUser = await User.findById(task.assignedTo);
-		if (assignedUser) {
-			const subject = "Vazifa o'chirildi";
-			const text = `Sizga tayinlangan vazifa o'chirildi: ${task.title}`;
-			await sendEmail(assignedUser.email, subject, text);
+		res.json({ message: "Vazifa muvaffaqiyatli o'chirildi" });
+	} catch (error) {
+		console.error("Vazifani o'chirishda xatolik:", error);
+		res.status(500).json({ error: error.message });
+	}
+};
+
+// Update task status
+export const updateTaskStatus = async (req, res) => {
+	try {
+		const { status } = req.body;
+		const task = await Task.findOne({ _id: req.params.id, isActive: true });
+
+		if (!task) {
+			return res.status(404).json({ error: "Vazifa topilmadi" });
 		}
 
-		res.status(200).json({ message: "Task deleted successfully" });
-	} catch (err) {
-		res.status(500).json({ error: err.message });
+		// Status validatsiyasi
+		if (!["pending", "in-progress", "completed"].includes(status)) {
+			return res.status(400).json({ error: "Noto'g'ri status" });
+		}
+
+		// Student faqat o'ziga tayinlangan vazifa statusini o'zgartira oladi
+		if (
+			req.user.role === "student" &&
+			task.assignedTo.toString() !== req.user.id
+		) {
+			return res.status(403).json({ error: "Ruxsat berilmagan" });
+		}
+
+		task.status = status;
+		await task.save();
+
+		await logActivity("task_status_updated", "Task", task._id, req.user.id);
+
+		res.json({
+			message: "Vazifa statusi yangilandi",
+			task,
+		});
+	} catch (error) {
+		console.error("Status yangilashda xatolik:", error);
+		res.status(500).json({ error: error.message });
 	}
 };

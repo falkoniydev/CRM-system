@@ -1,62 +1,46 @@
+// controllers/fileController.js
 import Task from "../models/Task.js";
+import fs from "fs/promises";
+import path from "path";
 
 export const uploadFile = async (req, res) => {
-	console.log("Fayl yuklash funksiyasi ishga tushdi!");
 	try {
-		if (!req.file) {
-			return res
-				.status(400)
-				.json({
-					error: "Fayl yuklanmadi yoki hajmi oshib ketdi (maksimal 10 MB).",
-				});
-		}
+		const { taskId } = req.params;
 
-		console.log("Request Body:", req.body);
-		console.log("File:", req.file);
-
-		const { taskId } = req.body;
-
-		// 1. Task ID ni validatsiya qilish
-		if (!taskId) {
-			return res.status(400).json({ error: "Task ID kiritilmagan." });
-		}
-
-		// 2. Fayl yuklanganligini tekshirish
-		if (!req.file) {
-			return res.status(400).json({ error: "Fayl yuklanmadi." });
-		}
-
-		// 3. Taskni topish
-		const task = await Task.findById(taskId);
+		// Taskni tekshirish
+		const task = await Task.findOne({ _id: taskId, isActive: true });
 		if (!task) {
-			return res.status(404).json({ error: "Task topilmadi." });
+			return res.status(404).json({ error: "Vazifa topilmadi" });
 		}
 
-		console.log("Task topildi:", task);
+		// Faylni tekshirish
+		if (!req.file) {
+			return res.status(400).json({ error: "Fayl yuklanmadi" });
+		}
 
-		// 4. Fayl ma'lumotlarini olamiz
+		// Fayl ma'lumotlarini tayyorlash
 		const fileData = {
-			filename: req.file.originalname,
-			contentType: req.file.mimetype,
-			data: req.file.buffer, // memoryStorage bilan buffer orqali olamiz
+			filename: req.file.filename,
+			originalname: req.file.originalname,
+			mimetype: req.file.mimetype,
+			size: req.file.size,
+			path: req.file.path.replace(/\\/g, "/"),
+			url: `/api/files/download/${taskId}/${req.file.filename}`,
+			uploadedAt: new Date(),
+			uploadedBy: req.user.id,
 		};
 
-		// 5. Faylni taskning attachments arrayiga qo'shamiz
+		// Taskga fayl qo'shish
 		task.attachments.push(fileData);
-		console.log("Attachments after push:", task.attachments);
-
-		// 6. Taskni saqlash
 		await task.save();
-		console.log("Task saqlandi:", task);
 
-		// 7. Javob qaytarish
 		res.status(200).json({
-			message: "Fayl muvaffaqiyatli yuklandi va saqlandi.",
-			taskId: task._id,
+			message: "Fayl muvaffaqiyatli yuklandi",
+			file: fileData,
 		});
 	} catch (error) {
 		console.error("Fayl yuklashda xatolik:", error);
-		res.status(500).json({ error: "Xatolik yuz berdi." });
+		res.status(500).json({ error: error.message });
 	}
 };
 
@@ -64,22 +48,22 @@ export const getFileList = async (req, res) => {
 	try {
 		const { taskId } = req.params;
 
-		// Taskni topish
-		const task = await Task.findById(taskId);
+		const task = await Task.findOne({ _id: taskId, isActive: true }).populate(
+			"attachments.uploadedBy",
+			"name"
+		);
+
 		if (!task) {
-			return res.status(404).json({ error: "Task topilmadi." });
+			return res.status(404).json({ error: "Vazifa topilmadi" });
 		}
 
-		// Taskning attachments arrayini qaytarish
-		res.status(200).json({
-			message: "Fayllar ro'yxati muvaffaqiyatli olindi",
+		res.json({
+			taskId,
 			files: task.attachments,
 		});
 	} catch (error) {
-		console.error("Error retrieving file list:", error);
-		res
-			.status(500)
-			.json({ error: "Fayllar ro'yxatini olishda xatolik yuz berdi." });
+		console.error("Fayllar ro'yxatini olishda xatolik:", error);
+		res.status(500).json({ error: error.message });
 	}
 };
 
@@ -87,27 +71,34 @@ export const downloadFile = async (req, res) => {
 	try {
 		const { taskId, filename } = req.params;
 
-		// Taskni topish
-		const task = await Task.findById(taskId);
+		const task = await Task.findOne({ _id: taskId, isActive: true });
 		if (!task) {
-			return res.status(404).json({ error: "Task topilmadi." });
+			return res.status(404).json({ error: "Vazifa topilmadi" });
 		}
 
-		// Faylni `attachments` dan qidirish
-		const file = task.attachments.find((att) => att.filename === filename);
+		const file = task.attachments.find((f) => f.filename === filename);
 		if (!file) {
-			return res.status(404).json({ error: "Fayl topilmadi." });
+			return res.status(404).json({ error: "Fayl topilmadi" });
 		}
 
-		// Faylni yuborish
-		res.set({
-			"Content-Type": file.contentType,
-			"Content-Disposition": `attachment; filename="${file.filename}"`,
-		});
-		res.send(file.data);
+		const filePath = path.join(process.cwd(), file.path);
+
+		try {
+			await fs.access(filePath);
+		} catch {
+			return res.status(404).json({ error: "Fayl topilmadi" });
+		}
+
+		res.setHeader("Content-Type", file.mimetype);
+		res.setHeader(
+			"Content-Disposition",
+			`attachment; filename="${file.originalname}"`
+		);
+
+		res.sendFile(filePath);
 	} catch (error) {
-		console.error("Faylni yuklab olishda xatolik:", error);
-		res.status(500).json({ error: "Xatolik yuz berdi." });
+		console.error("Faylni yuklashda xatolik:", error);
+		res.status(500).json({ error: error.message });
 	}
 };
 
@@ -115,26 +106,37 @@ export const deleteFile = async (req, res) => {
 	try {
 		const { taskId, filename } = req.params;
 
-		// Taskni topish
-		const task = await Task.findById(taskId);
+		const task = await Task.findOne({ _id: taskId, isActive: true });
 		if (!task) {
-			return res.status(404).json({ error: "Task topilmadi." });
+			return res.status(404).json({ error: "Vazifa topilmadi" });
 		}
 
-		// Faylni `attachments` dan o'chirish
 		const fileIndex = task.attachments.findIndex(
-			(att) => att.filename === filename
+			(f) => f.filename === filename
 		);
 		if (fileIndex === -1) {
-			return res.status(404).json({ error: "Fayl topilmadi." });
+			return res.status(404).json({ error: "Fayl topilmadi" });
 		}
 
+		const file = task.attachments[fileIndex];
+
+		// Faylni filesystemdan o'chirish
+		try {
+			await fs.unlink(path.join(process.cwd(), file.path));
+		} catch (error) {
+			console.error("Faylni o'chirishda xatolik:", error);
+		}
+
+		// Faylni databasedan o'chirish
 		task.attachments.splice(fileIndex, 1);
 		await task.save();
 
-		res.status(200).json({ message: "Fayl muvaffaqiyatli o'chirildi." });
+		res.json({
+			message: "Fayl muvaffaqiyatli o'chirildi",
+			filename: file.originalname,
+		});
 	} catch (error) {
 		console.error("Faylni o'chirishda xatolik:", error);
-		res.status(500).json({ error: "Xatolik yuz berdi." });
+		res.status(500).json({ error: error.message });
 	}
 };

@@ -25,45 +25,6 @@ const upload = multer({
 const router = express.Router();
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// FILE UPLOADING
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-/**
- * @swagger
- * /api/files/upload:
- *   post:
- *     summary: Fayl yuklash
- *     tags: [File Management]
- *     security:
- *       - bearerAuth: [] # Token talab qilinadi
- *     requestBody:
- *       required: true
- *       content:
- *         multipart/form-data:
- *           schema:
- *             type: object
- *             properties:
- *               file:
- *                 type: string
- *                 format: binary
- *     responses:
- *       200:
- *         description: Fayl muvaffaqiyatli yuklandi.
- *       400:
- *         description: Yuklashda xatolik.
- *       500:
- *         description: Server xatoligi.
- */
-router.post(
-	"/upload",
-	upload.single("file"),
-	(req, res, next) => {
-		console.log("Middleware orqali o'tdi!");
-		next();
-	},
-	uploadFile
-);
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // FILE DONWLAODING
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /**

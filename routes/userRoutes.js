@@ -12,7 +12,7 @@ import roleMiddleware from "../middlewares/roleMiddleware.js";
 import {
 	uploadProfilePhoto,
 	updateProfile,
-	uploadAvatar,
+	getProfilePhoto,
 } from "../controllers/userController.js";
 import multer from "multer";
 
@@ -22,96 +22,22 @@ const upload = multer({ storage });
 const router = express.Router();
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// PROFILE PHOTO UPLOADING
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-/**
- * @swagger
- * /api/users/profile:
- *   put:
- *     summary: Foydalanuvchi profilini yangilash
- *     tags: [User Service]
- *     security:
- *       - bearerAuth: [] # Token talab qilinadi
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               name:
- *                 type: string
- *                 example: Jane Doe
- *               email:
- *                 type: string
- *                 example: janedoe@example.com
- *     responses:
- *       200:
- *         description: Profil muvaffaqiyatli yangilandi.
- *       400:
- *         description: Ma'lumotlarda xatolik mavjud.
- */
-router.put("/profile/:userId", authMiddleware, updateProfile);
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// AVATAR UPLOAD
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-/**
- * @swagger
- * /api/users/profile/{userId}/avatar:
- *   post:
- *     summary: Foydalanuvchi avatarini yuklash
- *     tags: [User Service]
- *     security:
- *       - bearerAuth: [] # Token talab qilinadi
- *     parameters:
- *       - in: path
- *         name: userId
- *         required: true
- *         schema:
- *           type: string
- *         description: Foydalanuvchi ID
- *     requestBody:
- *       required: true
- *       content:
- *         multipart/form-data:
- *           schema:
- *             type: object
- *             properties:
- *               avatar:
- *                 type: string
- *                 format: binary
- *     responses:
- *       200:
- *         description: Avatar muvaffaqiyatli yuklandi.
- *       400:
- *         description: Yuklashda xatolik.
- */
-router.post(
-	"/profile/:userId/avatar",
-	authMiddleware,
-	upload.single("avatar"),
-	uploadAvatar
-);
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // UPLOAD PROFILE PHOTO
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /**
  * @swagger
- * /api/users/upload-profile/{userId}:
+ * /api/users/{userId}/profile-photo:
  *   post:
- *     summary: Foydalanuvchi profil surati yuklash
+ *     summary: Profil rasmini yuklash
  *     tags: [User Service]
  *     security:
- *       - bearerAuth: [] # Token talab qilinadi
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: userId
  *         required: true
  *         schema:
  *           type: string
- *         description: Foydalanuvchi ID
  *     requestBody:
  *       required: true
  *       content:
@@ -119,21 +45,53 @@ router.post(
  *           schema:
  *             type: object
  *             properties:
- *               profilePicture:
+ *               photo:
  *                 type: string
  *                 format: binary
  *     responses:
  *       200:
- *         description: Profil surati muvaffaqiyatli yuklandi.
+ *         description: Rasm muvaffaqiyatli yuklandi
  *       400:
- *         description: Yuklashda xatolik.
+ *         description: Xato format yoki rasm yuklanmadi
+ *       403:
+ *         description: Ruxsat berilmagan
+ *       404:
+ *         description: Foydalanuvchi topilmadi
  */
 router.post(
-	"/upload-profile/:userId",
+	"/:userId/profile-photo",
 	authMiddleware,
-	upload.single("profilePicture"),
+	upload.single("photo"),
 	uploadProfilePhoto
 );
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// GET PROFILE PHOTO
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/**
+ * @swagger
+ * /api/users/{userId}/profile-photo:
+ *   get:
+ *     summary: Profil rasmini olish
+ *     tags: [User Service]
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Profil rasmi
+ *         content:
+ *           image/*:
+ *             schema:
+ *               type: string
+ *               format: binary
+ *       404:
+ *         description: Rasm topilmadi
+ */
+router.get("/:userId/profile-photo", getProfilePhoto);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // CREATE NEW USER
@@ -196,10 +154,84 @@ router.post(
  *     summary: Barcha foydalanuvchilarni olish
  *     tags: [User Service]
  *     security:
- *       - bearerAuth: [] # Token talab qilinadi
+ *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: Foydalanuvchilar ro'yxati muvaffaqiyatli qaytarildi.
+ *         description: Foydalanuvchilar ro'yxati
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   _id:
+ *                     type: string
+ *                     example: 507f1f77bcf86cd799439011
+ *                   name:
+ *                     type: string
+ *                     example: John Doe
+ *                   email:
+ *                     type: string
+ *                     format: email
+ *                     example: john@example.com
+ *                   role:
+ *                     type: string
+ *                     enum: [admin, teacher, student]
+ *                     example: student
+ *                   profilePicture:
+ *                     type: object
+ *                     properties:
+ *                       filename:
+ *                         type: string
+ *                         example: profile-123.jpg
+ *                       originalname:
+ *                         type: string
+ *                         example: my-photo.jpg
+ *                       mimetype:
+ *                         type: string
+ *                         example: image/jpeg
+ *                       size:
+ *                         type: number
+ *                         example: 1048576
+ *                   createdAt:
+ *                     type: string
+ *                     format: date-time
+ *                     example: 2024-01-19T12:00:00Z
+ *                   updatedAt:
+ *                     type: string
+ *                     format: date-time
+ *                     example: 2024-01-19T12:00:00Z
+ *       401:
+ *         description: Token xatosi
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Unauthorized
+ *       403:
+ *         description: Foydalanuvchi admin emas
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Admin huquqi kerak
+ *       500:
+ *         description: Server xatosi
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Internal server error
  */
 router.get("/", authMiddleware, roleMiddleware(["admin"]), async (req, res) => {
 	try {
@@ -254,19 +286,18 @@ router.get(
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /**
  * @swagger
- * /api/users/{id}:
+ * /api/users/{userId}/profile:
  *   put:
- *     summary: Foydalanuvchini yangilash
+ *     summary: Foydalanuvchi profilini yangilash
  *     tags: [User Service]
  *     security:
- *       - bearerAuth: [] # Token talab qilinadi
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: id
+ *         name: userId
  *         required: true
  *         schema:
  *           type: string
- *         description: Foydalanuvchi ID
  *     requestBody:
  *       required: true
  *       content:
@@ -276,36 +307,26 @@ router.get(
  *             properties:
  *               name:
  *                 type: string
- *                 example: Jane Doe Updated
+ *                 example: Jane Doe
  *               email:
  *                 type: string
- *                 example: janedoeupdated@example.com
- *               role:
+ *                 format: email
+ *                 example: jane@example.com
+ *               password:
  *                 type: string
- *                 example: admin
+ *                 format: password
+ *                 example: newPassword123
  *     responses:
  *       200:
- *         description: Foydalanuvchi muvaffaqiyatli yangilandi.
+ *         description: Profil muvaffaqiyatli yangilandi
+ *       400:
+ *         description: Noto'g'ri ma'lumotlar
+ *       401:
+ *         description: Token xatosi
  *       404:
- *         description: Foydalanuvchi topilmadi.
+ *         description: Foydalanuvchi topilmadi
  */
-router.put(
-	"/:id",
-	authMiddleware,
-	roleMiddleware(["admin"]),
-	async (req, res) => {
-		try {
-			const user = await User.findByIdAndUpdate(req.params.id, req.body, {
-				new: true,
-				runValidators: true,
-			});
-			if (!user) return res.status(404).json({ error: "User not found" });
-			res.json(user);
-		} catch (err) {
-			res.status(400).json({ error: err.message });
-		}
-	}
-);
+router.put("/:userId/profile", authMiddleware, updateProfile);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // DELETE USER BY ID

@@ -1,4 +1,5 @@
 import express from "express";
+import path from "path";
 import mongoose from "mongoose"; // MongoDB uchun
 import cors from "cors";
 import dotenv from "dotenv";
@@ -31,7 +32,7 @@ const io = new Server(server, {
 			"http://localhost:5000", // localhosts
 			"https://crm-system.onrender.com", // production server
 		], // Frontend URL
-		methods: ["GET", "POST", "PUT", "DELETE"],
+		methods: ["GET", "POST", "PATCH", "PUT", "DELETE"],
 	},
 });
 
@@ -66,6 +67,9 @@ app.use(
 	})
 );
 app.use(morgan("dev")); // Logger
+
+// UPLOAD STATIC POHTO FILES
+app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
 // Routes
 app.use("/api/auth", authRoutes); // Auth marshrutlari

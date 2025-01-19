@@ -2,81 +2,159 @@ import Comment from "../models/Comment.js";
 import Task from "../models/Task.js";
 import { logActivity } from "../utils/logActivity.js";
 
-// Create a new comment
+// Create comment
 export const createComment = async (req, res) => {
-	const { content } = req.body;
-	const { taskId } = req.params;
-
 	try {
-		const task = await Task.findById(taskId);
+		const { content } = req.body;
+		const { taskId } = req.params;
+
+		// Content validatsiyasi
+		if (!content || content.trim().length === 0) {
+			return res.status(400).json({ error: "Izoh matnini kiriting" });
+		}
+
+		// Task mavjudligini tekshirish
+		const task = await Task.findOne({ _id: taskId, isActive: true });
 		if (!task) {
-			return res.status(404).json({ error: "Task not found" });
+			return res.status(404).json({ error: "Vazifa topilmadi" });
 		}
 
 		const comment = new Comment({
 			task: taskId,
-			user: req.user.id, // Authenticated user ID
-			content,
+			user: req.user.id,
+			content: content.trim(),
 		});
 
 		await comment.save();
-
-		// console.log("Task ID:", taskId);
-		// console.log("User ID from req.user:", req.user.id);
-		// console.log("Content:", content);
+		await comment.populate("user", "name email");
 
 		// Log yozish
-		await logActivity("comment_created", "Task", comment._id, req.user.id);
+		await logActivity("comment_created", "Task", taskId, req.user.id);
 
-		res.status(201).json({ message: "Comment added successfully", comment });
-	} catch (err) {
-		res.status(500).json({ error: err.message });
-	}
-};
-
-// Get all comments for a task
-export const getComments = async (req, res) => {
-	try {
-		const { taskId } = req.params;
-
-		const comments = await Comment.find({ task: taskId })
-			.populate("user", "name email")
-			.sort({ createdAt: -1 });
-
-		res.status(200).json(comments);
+		res.status(201).json({
+			message: "Izoh qo'shildi",
+			comment,
+		});
 	} catch (error) {
+		console.error("Izoh yaratishda xatolik:", error);
 		res.status(500).json({ error: error.message });
 	}
 };
 
-// Delete a comment
+// Get comments
+export const getComments = async (req, res) => {
+	try {
+		const { taskId } = req.params;
+		const { sort = "desc", limit = 50, skip = 0 } = req.query;
+
+		// Task mavjudligini tekshirish
+		const task = await Task.findOne({ _id: taskId, isActive: true });
+		if (!task) {
+			return res.status(404).json({ error: "Vazifa topilmadi" });
+		}
+
+		// Izohlarni olish
+		const comments = await Comment.find({
+			task: taskId,
+			isActive: true,
+		})
+			.populate("user", "name email")
+			.sort({ createdAt: sort === "desc" ? -1 : 1 })
+			.skip(Number(skip))
+			.limit(Number(limit));
+
+		const total = await Comment.countDocuments({
+			task: taskId,
+			isActive: true,
+		});
+
+		res.json({
+			comments,
+			pagination: {
+				total,
+				limit: Number(limit),
+				skip: Number(skip),
+			},
+		});
+	} catch (error) {
+		console.error("Izohlarni olishda xatolik:", error);
+		res.status(500).json({ error: error.message });
+	}
+};
+
+// Delete comment
 export const deleteComment = async (req, res) => {
 	try {
 		const { taskId, commentId } = req.params;
-		console.log("Task ID:", taskId);
-		console.log("Comment ID:", commentId);
 
-		const comment = await Comment.findById(commentId);
-		console.log("Found Comment:", comment);
+		const comment = await Comment.findOne({
+			_id: commentId,
+			task: taskId,
+			isActive: true,
+		});
 
 		if (!comment) {
-			return res.status(404).json({ error: "Comment not found" });
+			return res.status(404).json({ error: "Izoh topilmadi" });
+		}
+
+		// Faqat izoh egasi yoki admin o'chira oladi
+		if (comment.user.toString() !== req.user.id && req.user.role !== "admin") {
+			return res
+				.status(403)
+				.json({ error: "Bu amalni bajarish uchun huquq yo'q" });
+		}
+
+		// Soft delete
+		comment.isActive = false;
+		await comment.save();
+
+		// Log yozish
+		await logActivity("comment_deleted", "Task", taskId, req.user.id);
+
+		res.json({ message: "Izoh o'chirildi" });
+	} catch (error) {
+		console.error("Izohni o'chirishda xatolik:", error);
+		res.status(500).json({ error: error.message });
+	}
+};
+
+// Update comment
+export const updateComment = async (req, res) => {
+	try {
+		const { commentId } = req.params;
+		const { content } = req.body;
+
+		if (!content || content.trim().length === 0) {
+			return res.status(400).json({ error: "Izoh matnini kiriting" });
+		}
+
+		const comment = await Comment.findOne({
+			_id: commentId,
+			isActive: true,
+		});
+
+		if (!comment) {
+			return res.status(404).json({ error: "Izoh topilmadi" });
 		}
 
 		if (comment.user.toString() !== req.user.id) {
 			return res
 				.status(403)
-				.json({ error: "Unauthorized to delete this comment" });
+				.json({ error: "Bu amalni bajarish uchun huquq yo'q" });
 		}
 
-		await comment.deleteOne();
+		comment.content = content.trim();
+		comment.isEdited = true;
+		await comment.save();
 
-		// Log yozish
-		await logActivity("comment_deleted", "Task", comment._id, req.user.id);
+		await logActivity("comment_updated", "Task", comment.task, req.user.id);
 
-		res.status(200).json({ message: "Comment deleted successfully" });
-	} catch (err) {
-		console.error(err);
-		res.status(500).json({ error: err.message });
+		res.json({
+			message: "Izoh yangilandi",
+			comment,
+		});
+	} catch (error) {
+		console.error("Izohni yangilashda xatolik:", error);
+		res.status(500).json({ error: error.message });
 	}
 };
