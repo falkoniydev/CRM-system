@@ -10,10 +10,12 @@ import customerRoutes from "./routes/customerRoutes.js";
 import taskRoutes from "./routes/taskRoutes.js";
 import commentRoutes from "./routes/commentRoutes.js";
 import activityLogRoutes from "./routes/activityLogRoutes.js";
+import courseRoutes from "./routes/courseRoutes.js";
 import { monitorTasks } from "./utils/scheduler.js";
 import fileRoutes from "./routes/fileRoutes.js";
 import statsRoutes from "./routes/statsRoutes.js";
 import chatRoutes from "./routes/chatRoutes.js";
+import paymentRoutes from "./routes/paymentRoutes.js";
 import { Server } from "socket.io";
 import { swaggerDocs } from "./swagger.js";
 import http from "http";
@@ -81,6 +83,8 @@ app.use("/api/activity-logs", activityLogRoutes); // Activity log
 app.use("/api/files", fileRoutes);
 app.use("/api/stats", statsRoutes); // Foydalanuvchi faoliyati statistikasi uchun marshrut
 app.use("/api/chat", chatRoutes);
+app.use("/api/courses", courseRoutes); // Course Management
+app.use("/api/payments", paymentRoutes);
 
 // Health check endpoint
 app.get("/health", (req, res) => res.status(200).json({ status: "OK" }));
